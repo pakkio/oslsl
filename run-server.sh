@@ -9,7 +9,7 @@ export NVM_DIR="$HOME/.nvm"
 export PATH="/home/pakkio/.nvm/versions/node/v22.16.0/bin:$PATH"
 
 # Change to the server directory
-cd /home/pakkio/IdeaProjects/prova/lsl-mcp-server
+cd /home/pakkio/IdeaProjects/lsl-mcp-server
 
 # Run the server
 node dist/index.js
