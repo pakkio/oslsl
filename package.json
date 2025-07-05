@@ -9,9 +9,16 @@
     "start-wrapper": "./run-server.sh",
     "dev": "ts-node src/index.ts",
     "test": "jest",
-    "lint": "eslint src --ext .ts"
+    "lint": "eslint src --ext .ts",
+    "coverage": "ts-node src/tools/coverage-report.ts"
   },
-  "keywords": ["mcp", "lsl", "opensim", "second-life", "scripting"],
+  "keywords": [
+    "mcp",
+    "lsl",
+    "opensim",
+    "second-life",
+    "scripting"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
@@ -21,6 +28,7 @@
     "node-fetch": "^3.3.2"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",

@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LSLResourceService = void 0;
-const lsl_resources_js_1 = require("../data/lsl-resources.js");
+const lsl_resources_1 = require("../data/lsl-resources");
 class LSLResourceService {
     async getDocumentationResource(type) {
         switch (type) {
@@ -21,7 +21,7 @@ class LSLResourceService {
                             description: 'Main entry point for LSL documentation',
                         },
                     ],
-                    commonFunctions: lsl_resources_js_1.LSLResources.getCommonLSLFunctions(),
+                    commonFunctions: lsl_resources_1.LSLResources.getCommonLSLFunctions(),
                 };
             case 'events':
                 return {
@@ -34,7 +34,7 @@ class LSLResourceService {
                             description: 'Official LSL events documentation',
                         },
                     ],
-                    commonEvents: lsl_resources_js_1.LSLResources.getCommonLSLEvents(),
+                    commonEvents: lsl_resources_1.LSLResources.getCommonLSLEvents(),
                 };
             case 'constants':
                 return {
@@ -47,7 +47,7 @@ class LSLResourceService {
                             description: 'Official LSL constants documentation',
                         },
                     ],
-                    commonConstants: lsl_resources_js_1.LSLResources.getCommonLSLConstants(),
+                    commonConstants: lsl_resources_1.LSLResources.getCommonLSLConstants(),
                 };
             default:
                 throw new Error(`Unknown documentation type: ${type}`);
@@ -71,7 +71,7 @@ class LSLResourceService {
                             description: 'Main scripting documentation for OpenSimulator',
                         },
                     ],
-                    commonFunctions: lsl_resources_js_1.LSLResources.getCommonOSSLFunctions(),
+                    commonFunctions: lsl_resources_1.LSLResources.getCommonOSSLFunctions(),
                 };
             default:
                 throw new Error(`Unknown OSSL documentation type: ${type}`);
@@ -81,7 +81,7 @@ class LSLResourceService {
         return {
             title: 'LSL GitHub Repositories',
             description: 'Curated list of LSL script repositories',
-            repositories: lsl_resources_js_1.LSLResources.getGitHubRepositories(),
+            repositories: lsl_resources_1.LSLResources.getGitHubRepositories(),
             usage: {
                 description: 'These repositories contain examples and libraries for LSL scripting',
                 searchTips: [
