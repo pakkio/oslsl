@@ -4,6 +4,7 @@ export declare class LSLMCPServer {
     server: Server;
     private docService;
     private resourceService;
+    private analysisService;
     constructor();
     private setupHandlers;
     run(): Promise<void>;

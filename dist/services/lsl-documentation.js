@@ -41,6 +41,7 @@ const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
 const lsl_resources_js_1 = require("../data/lsl-resources.js");
 const ossl_functions_js_1 = require("../data/ossl-functions.js");
+const lsl_parser_js_1 = require("./lsl-parser.js");
 class LSLDocumentationService {
     static BASE_URLS = {
         SECONDLIFE_WIKI: 'https://wiki.secondlife.com/wiki/',
@@ -56,9 +57,15 @@ class LSLDocumentationService {
             const url = `${LSLDocumentationService.BASE_URLS.SECONDLIFE_WIKI}${cleanName}`;
             const response = await axios_1.default.get(url, { timeout: 10000 });
             const $ = cheerio.load(response.data);
-            const description = $('.mw-parser-output p').first().text().trim();
-            const syntax = $('pre, code').first().text().trim();
-            const examples = this.extractExamples($);
+            const parsedFunction = lsl_parser_js_1.LSLParser.extractLSLFunction($);
+            const cleanCode = lsl_parser_js_1.LSLParser.extractCleanLSLCode($);
+            const validation = lsl_parser_js_1.LSLParser.validateLSLCode(cleanCode);
+            if (validation.confidence < 0.5) {
+                throw new Error(`Low confidence LSL code detected (${validation.confidence.toFixed(2)}). Possible contamination: ${validation.errors.join(', ')}`);
+            }
+            const description = parsedFunction.description || $('.mw-parser-output p').first().text().trim();
+            const syntax = parsedFunction.syntax || cleanCode;
+            const examples = parsedFunction.examples || this.extractExamples($);
             return {
                 content: [
                     {
@@ -73,8 +80,13 @@ ${description}
 ${syntax}
 \`\`\`
 
+## Code Quality
+- **Validation Score**: ${validation.confidence.toFixed(2)}
+- **Status**: ${validation.isValid ? 'Valid LSL' : 'Contains errors'}
+${validation.warnings.length > 0 ? `- **Warnings**: ${validation.warnings.join(', ')}` : ''}
+
 ## Examples
-${examples}
+${Array.isArray(examples) ? examples.join('\n\n') : examples}
 
 ## Documentation Source
 ${url}

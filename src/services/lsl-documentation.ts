@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import { LSLResources } from '../data/lsl-resources.js';
 import { OSSLFunctions } from '../data/ossl-functions.js';
+import { LSLParser } from './lsl-parser.js';
 
 export class LSLDocumentationService {
   private static readonly BASE_URLS = {
@@ -22,9 +23,17 @@ export class LSLDocumentationService {
       const response = await axios.get(url, { timeout: 10000 });
       const $ = cheerio.load(response.data);
       
-      const description = $('.mw-parser-output p').first().text().trim();
-      const syntax = $('pre, code').first().text().trim();
-      const examples = this.extractExamples($);
+      const parsedFunction = LSLParser.extractLSLFunction($);
+      const cleanCode = LSLParser.extractCleanLSLCode($);
+      const validation = LSLParser.validateLSLCode(cleanCode);
+      
+      if (validation.confidence < 0.5) {
+        throw new Error(`Low confidence LSL code detected (${validation.confidence.toFixed(2)}). Possible contamination: ${validation.errors.join(', ')}`);
+      }
+      
+      const description = parsedFunction.description || $('.mw-parser-output p').first().text().trim();
+      const syntax = parsedFunction.syntax || cleanCode;
+      const examples = parsedFunction.examples || this.extractExamples($);
       
       return {
         content: [
@@ -40,8 +49,13 @@ ${description}
 ${syntax}
 \`\`\`
 
+## Code Quality
+- **Validation Score**: ${validation.confidence.toFixed(2)}
+- **Status**: ${validation.isValid ? 'Valid LSL' : 'Contains errors'}
+${validation.warnings.length > 0 ? `- **Warnings**: ${validation.warnings.join(', ')}` : ''}
+
 ## Examples
-${examples}
+${Array.isArray(examples) ? examples.join('\n\n') : examples}
 
 ## Documentation Source
 ${url}
