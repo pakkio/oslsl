@@ -6,10 +6,13 @@ module.exports = {
   transform: {
     '^.+\.ts$': 'ts-jest',
   },
+  transformIgnorePatterns: [
+    '/node_modules/(?!@modelcontextprotocol/sdk)/',
+  ],
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',
-    '!src/__tests__/**', 
+    '!src/__tests__/**',
   ],
   coverageDirectory: 'coverage',
   coverageReporters: [
