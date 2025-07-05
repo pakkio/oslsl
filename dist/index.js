@@ -4,8 +4,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
-const lsl_documentation_js_1 = require("./services/lsl-documentation.js");
-const lsl_resource_js_1 = require("./services/lsl-resource.js");
+const lsl_documentation_1 = require("./services/lsl-documentation");
+const lsl_resource_1 = require("./services/lsl-resource");
 class LSLMCPServer {
     server;
     docService;
@@ -20,8 +20,8 @@ class LSLMCPServer {
                 resources: {},
             },
         });
-        this.docService = new lsl_documentation_js_1.LSLDocumentationService();
-        this.resourceService = new lsl_resource_js_1.LSLResourceService();
+        this.docService = new lsl_documentation_1.LSLDocumentationService();
+        this.resourceService = new lsl_resource_1.LSLResourceService();
         this.setupHandlers();
     }
     setupHandlers() {
@@ -101,6 +101,21 @@ class LSLMCPServer {
                                     enum: ['performance', 'security', 'memory', 'general'],
                                     description: 'Category of best practices to retrieve',
                                     default: 'general',
+                                },
+                            },
+                        },
+                    },
+                    {
+                        name: 'ossl-browse-functions',
+                        description: 'Browse OSSL functions by category or list all available functions',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                category: {
+                                    type: 'string',
+                                    enum: ['NPC', 'Agent', 'Region', 'Console', 'Graphics', 'Parcel', 'Media', 'Wind', 'Inventory', 'HTTP', 'Physics', 'all'],
+                                    description: 'Category of OSSL functions to browse',
+                                    default: 'all',
                                 },
                             },
                         },
@@ -200,6 +215,8 @@ class LSLMCPServer {
                         return await this.docService.searchExamples(args?.topic, args?.platform);
                     case 'lsl-best-practices':
                         return await this.docService.getBestPractices(args?.category);
+                    case 'ossl-browse-functions':
+                        return await this.docService.browseOSSLFunctions(args?.category);
                     default:
                         throw new Error(`Unknown tool: ${name}`);
                 }

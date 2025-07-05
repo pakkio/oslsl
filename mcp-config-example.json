@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "lsl-server": {
+      "command": "node",
+      "args": ["/path/to/lsl-mcp-server/dist/index.js"],
+      "env": {
+        "LSL_CACHE_TTL": "3600",
+        "LSL_REQUEST_TIMEOUT": "10000"
+      }
+    }
+  }
+}

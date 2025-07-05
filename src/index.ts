@@ -123,6 +123,21 @@ class LSLMCPServer {
               },
             },
           },
+          {
+            name: 'ossl-browse-functions',
+            description: 'Browse OSSL functions by category or list all available functions',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                category: {
+                  type: 'string',
+                  enum: ['NPC', 'Agent', 'Region', 'Console', 'Graphics', 'Parcel', 'Media', 'Wind', 'Inventory', 'HTTP', 'Physics', 'all'],
+                  description: 'Category of OSSL functions to browse',
+                  default: 'all',
+                },
+              },
+            },
+          },
         ],
       };
     });
@@ -234,6 +249,11 @@ class LSLMCPServer {
           case 'lsl-best-practices':
             return await this.docService.getBestPractices(
               args?.category as 'performance' | 'security' | 'memory' | 'general'
+            );
+
+          case 'ossl-browse-functions':
+            return await this.docService.browseOSSLFunctions(
+              args?.category as string
             );
 
           default:

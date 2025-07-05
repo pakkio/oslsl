@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
-import { LSLResources } from '../data/lsl-resources';
+import { LSLResources } from '../data/lsl-resources.js';
+import { OSSLFunctions } from '../data/ossl-functions.js';
 
 export class LSLDocumentationService {
   private static readonly BASE_URLS = {
@@ -8,6 +9,10 @@ export class LSLDocumentationService {
     OPENSIM_WIKI: 'http://opensimulator.org/wiki/',
     LSL_WIKI: 'https://lslwiki.digiworldz.com/',
   };
+
+  private cache: Map<string, any> = new Map();
+  private cacheExpiry: Map<string, number> = new Map();
+  private readonly CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
   async lookupLSLFunction(functionName: string): Promise<any> {
     try {
@@ -98,46 +103,50 @@ ${url}
   }
 
   async lookupOSSLFunction(functionName: string): Promise<any> {
+    const cleanName = functionName.replace(/[()]/g, '');
+    const cacheKey = `ossl-${cleanName}`;
+
+    if (this.isCacheValid(cacheKey)) {
+      return this.cache.get(cacheKey);
+    }
+
+    const offlineFunction = OSSLFunctions.getFunctionByName(cleanName);
+    if (offlineFunction) {
+      const response = this.formatOSSLResponse(offlineFunction);
+      this.setCache(cacheKey, response);
+      return response;
+    }
+
     try {
-      const cleanName = functionName.replace(/[()]/g, '');
-      const url = `${LSLDocumentationService.BASE_URLS.OPENSIM_WIKI}${cleanName}`;
-      
-      const response = await axios.get(url, { timeout: 10000 });
-      const $ = cheerio.load(response.data);
-      
+      const searchUrl = `${LSLDocumentationService.BASE_URLS.OPENSIM_WIKI}index.php?title=Special:Search&search=${encodeURIComponent(cleanName)}`;
+      let response = await axios.get(searchUrl, { timeout: 7000 });
+      let $ = cheerio.load(response.data);
+
+      const firstResultLink = $('.mw-search-result-heading a').first().attr('href');
+      if (!firstResultLink) {
+        throw new Error('Function not found on the wiki.');
+      }
+
+      const functionUrl = `${LSLDocumentationService.BASE_URLS.OPENSIM_WIKI}${firstResultLink}`;
+      response = await axios.get(functionUrl, { timeout: 7000 });
+      $ = cheerio.load(response.data);
+
       const description = $('.mw-parser-output p').first().text().trim();
-      const syntax = $('pre, code').first().text().trim();
-      const examples = this.extractExamples($);
+      const syntax = $('pre.lsl').first().text().trim();
       
-      return {
+      const result = {
         content: [
           {
             type: 'text',
-            text: `# OSSL Function: ${functionName}
-
-## Description
-${description}
-
-## Syntax
-\`\`\`lsl
-${syntax}
-\`\`\`
-
-## Examples
-${examples}
-
-## Documentation Source
-${url}
-
-## Related Resources
-- [OSSL Documentation](http://opensimulator.org/wiki/OSSL)
-- [OpenSimulator Scripting](http://opensimulator.org/wiki/Scripting_Documentation)
-`,
+            text: `# OSSL Function: ${functionName}\n\n## Description\n${description}\n\n## Syntax\n\`\`\`lsl\n${syntax}\n\`\`\`\n\n## Documentation Source\n${functionUrl}\n\n## Status\nFetched online, as it was not in the local database.`,
           },
         ],
       };
+
+      this.setCache(cacheKey, result);
+      return result;
     } catch (error) {
-      return this.getFallbackResponse(functionName, 'OSSL function', error);
+      return this.getOSSLFallbackResponse(functionName, error);
     }
   }
 
@@ -219,6 +228,88 @@ ${practice.examples}
     return examples.length > 0 ? examples.join('\n\n') : 'No examples found in documentation.';
   }
 
+  private formatOSSLResponse(func: any): any {
+    const permissionLevels: any = OSSLFunctions.getPermissionLevels();
+    const permissionInfo = permissionLevels[func.permissions] || {};
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `# OSSL Function: ${func.name}
+
+## Description
+${func.description}
+
+## Syntax
+\`\`\`lsl
+${func.syntax}
+\`\`\`
+
+## Parameters
+${func.parameters.map((param: any) => `- **${param.name}** (${param.type}): ${param.description}`).join('\n')}
+
+## Return Type
+${func.returnType}
+
+## Category
+${func.category}
+
+## Example
+\`\`\`lsl
+${func.example}
+\`\`\`
+
+## Availability
+${func.availability}
+
+## Permission Level
+**${permissionInfo.level || func.permissions}** - ${permissionInfo.description || 'Permission level required'}
+
+## Official Documentation
+${func.url}
+
+## Related Resources
+- [OSSL Documentation](http://opensimulator.org/wiki/OSSL)
+- [OSSL Functions Category](http://opensimulator.org/wiki/Category:OSSL_Functions)
+- [OpenSimulator Scripting](http://opensimulator.org/wiki/Scripting_Documentation)
+`,
+        },
+      ],
+    };
+  }
+
+  private getOSSLFallbackResponse(name: string, error: any): any {
+    const allFunctions = OSSLFunctions.getAllFunctions();
+    const similarFunctions = allFunctions
+      .filter(func => func.name.toLowerCase().includes(name.toLowerCase()))
+      .slice(0, 5);
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `# OSSL Function: ${name}
+
+## Error
+Could not retrieve documentation: ${error.message}
+
+${similarFunctions.length > 0 ? `## Similar Functions Found
+${similarFunctions.map(func => `- **${func.name}** - ${func.description}`).join('\n')}\n\n` : ''}## Alternative Resources
+- [OSSL Documentation](http://opensimulator.org/wiki/OSSL)
+- [OSSL Functions Category](http://opensimulator.org/wiki/Category:OSSL_Functions)
+- [OpenSimulator Scripting](http://opensimulator.org/wiki/Scripting_Documentation)
+
+## Search Suggestions
+Try searching for "${name}" in:
+- OpenSimulator Wiki: http://opensimulator.org/wiki/Special:Search?search=${encodeURIComponent(name)}
+- GitHub repositories with OSSL examples
+`,
+        },
+      ],
+    };
+  }
+
   private getFallbackResponse(name: string, type: string, error: any): any {
     return {
       content: [
@@ -244,5 +335,95 @@ Try searching for "${name}" in:
         },
       ],
     };
+  }
+
+  private isCacheValid(key: string): boolean {
+    const expiry = this.cacheExpiry.get(key);
+    if (!expiry) return false;
+    return Date.now() < expiry;
+  }
+
+  private setCache(key: string, value: any): void {
+    this.cache.set(key, value);
+    this.cacheExpiry.set(key, Date.now() + this.CACHE_TTL);
+  }
+
+  async browseOSSLFunctions(category: string = 'all'): Promise<any> {
+    const functions = category === 'all' 
+      ? OSSLFunctions.getAllFunctions()
+      : OSSLFunctions.getFunctionsByCategory(category);
+    
+    const categories = OSSLFunctions.getCategories();
+    const permissionLevels = OSSLFunctions.getPermissionLevels();
+    
+    if (category === 'all') {
+      const functionsByCategory = categories.map(cat => ({
+        category: cat,
+        functions: OSSLFunctions.getFunctionsByCategory(cat)
+      }));
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `# OSSL Functions Overview
+
+## Available Categories
+${categories.map(cat => `- **${cat}** (${OSSLFunctions.getFunctionsByCategory(cat).length} functions)`).join('\n')}
+
+## Functions by Category
+
+${functionsByCategory.map(catGroup => `### ${catGroup.category} Functions
+${catGroup.functions.map(func => `- **${func.name}** - ${func.description}`).join('\n')}
+`).join('\n')}
+
+## Permission Levels
+${Object.entries(permissionLevels).map(([key, level]: [string, any]) => `- **${level.level}** (${key}): ${level.description}`).join('\n')}
+
+## Usage
+To get detailed information about a specific function, use the \`ossl-function-lookup\` tool.
+
+## Documentation Sources
+- [OSSL Functions Category](http://opensimulator.org/wiki/Category:OSSL_Functions)
+- [OSSL Documentation](http://opensimulator.org/wiki/OSSL)
+- [OpenSimulator Scripting](http://opensimulator.org/wiki/Scripting_Documentation)
+`,
+          },
+        ],
+      };
+    } else {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `# OSSL ${category} Functions
+
+## Available Functions (${functions.length})
+
+${functions.map(func => `### ${func.name}
+**Description:** ${func.description}
+**Syntax:** \`${func.syntax}\`
+**Permission:** ${func.permissions}
+**Availability:** ${func.availability}
+
+`).join('')}
+
+## Permission Levels for ${category}
+${[...new Set(functions.map(f => f.permissions))].map(perm => {
+  const level = (permissionLevels as any)[perm];
+  return level ? `- **${level.level}** (${perm}): ${level.description}` : `- **${perm}**: Custom permission level`;
+}).join('\n')}
+
+## Usage
+To get detailed information about a specific function, use the \`ossl-function-lookup\` tool with the function name.
+
+## Documentation Sources
+- [OSSL Functions Category](http://opensimulator.org/wiki/Category:OSSL_Functions)
+- [OSSL Documentation](http://opensimulator.org/wiki/OSSL)
+`,
+          },
+        ],
+      };
+    }
   }
 }
