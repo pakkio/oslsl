@@ -17,12 +17,14 @@ import {
 import { LSLDocumentationService } from './services/lsl-documentation';
 import { LSLResourceService } from './services/lsl-resource';
 import { LSLSemanticAnalysisService } from './services/lsl-semantic-analysis';
+import { LSLDocumentationEnhanced } from './services/lsl-documentation-enhanced';
 
 export class LSLMCPServer {
   public server: Server;
   private docService: LSLDocumentationService;
   private resourceService: LSLResourceService;
   private analysisService: LSLSemanticAnalysisService;
+  private enhancedDocService: LSLDocumentationEnhanced;
 
   constructor() {
     this.server = new Server(
@@ -41,6 +43,7 @@ export class LSLMCPServer {
     this.docService = new LSLDocumentationService();
     this.resourceService = new LSLResourceService();
     this.analysisService = new LSLSemanticAnalysisService();
+    this.enhancedDocService = new LSLDocumentationEnhanced();
 
     this.setupHandlers();
   }
@@ -169,6 +172,20 @@ export class LSLMCPServer {
                   type: 'integer',
                   description: 'Maximum number of results to return',
                   default: 5,
+                },
+              },
+              required: ['function_name'],
+            },
+          },
+          {
+            name: 'lsl-function-lookup-enhanced',
+            description: 'Enhanced LSL function lookup with structured data validation',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                function_name: {
+                  type: 'string',
+                  description: 'Name of the LSL function to look up',
                 },
               },
               required: ['function_name'],
@@ -326,6 +343,9 @@ Use these similar functions when you need alternative approaches or want to expl
                 },
               ],
             };
+
+          case 'lsl-function-lookup-enhanced':
+            return await this.enhancedDocService.lookupLSLFunctionEnhanced(args?.function_name as string);
 
           default:
             throw new Error(`Unknown tool: ${name}`);

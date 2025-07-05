@@ -8,11 +8,13 @@ const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 const lsl_documentation_1 = require("./services/lsl-documentation");
 const lsl_resource_1 = require("./services/lsl-resource");
 const lsl_semantic_analysis_1 = require("./services/lsl-semantic-analysis");
+const lsl_documentation_enhanced_1 = require("./services/lsl-documentation-enhanced");
 class LSLMCPServer {
     server;
     docService;
     resourceService;
     analysisService;
+    enhancedDocService;
     constructor() {
         this.server = new index_js_1.Server({
             name: 'lsl-mcp-server',
@@ -26,6 +28,7 @@ class LSLMCPServer {
         this.docService = new lsl_documentation_1.LSLDocumentationService();
         this.resourceService = new lsl_resource_1.LSLResourceService();
         this.analysisService = new lsl_semantic_analysis_1.LSLSemanticAnalysisService();
+        this.enhancedDocService = new lsl_documentation_enhanced_1.LSLDocumentationEnhanced();
         this.setupHandlers();
     }
     setupHandlers() {
@@ -152,6 +155,20 @@ class LSLMCPServer {
                                     type: 'integer',
                                     description: 'Maximum number of results to return',
                                     default: 5,
+                                },
+                            },
+                            required: ['function_name'],
+                        },
+                    },
+                    {
+                        name: 'lsl-function-lookup-enhanced',
+                        description: 'Enhanced LSL function lookup with structured data validation',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                function_name: {
+                                    type: 'string',
+                                    description: 'Name of the LSL function to look up',
                                 },
                             },
                             required: ['function_name'],
@@ -284,6 +301,8 @@ Use these similar functions when you need alternative approaches or want to expl
                                 },
                             ],
                         };
+                    case 'lsl-function-lookup-enhanced':
+                        return await this.enhancedDocService.lookupLSLFunctionEnhanced(args?.function_name);
                     default:
                         throw new Error(`Unknown tool: ${name}`);
                 }
