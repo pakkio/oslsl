@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "lsl-mcp-server": {
+      "command": "C:\\Windows\\System32\\wsl.exe",
+      "args": ["-e", "bash", "-c", "cd /home/pakkio/IdeaProjects/prova/lsl-mcp-server && node dist/index.js"],
+      "env": {
+        "LSL_CACHE_TTL": "3600",
+        "LSL_REQUEST_TIMEOUT": "10000"
+      }
+    }
+  }
+}
