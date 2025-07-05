@@ -1,11 +1,15 @@
 import { LSLParser, LSLToken, LSLValidationResult } from './lsl-parser.js';
 import { LSLEmbeddingsService, SimilarityResult } from './lsl-embeddings.js';
+import { LSLRuleEngine, RuleViolation } from './lsl-rule-engine.js';
+import { LSLSecurityScanner, SecurityVulnerability, SecurityReport } from './lsl-security-scanner.js';
+import { LSLPerformanceProfiler, PerformanceProfile } from './lsl-performance-profiler.js';
 
 export interface LSLAnalysisResult {
   syntaxValidation: LSLValidationResult;
   semanticIssues: SemanticIssue[];
-  performanceMetrics: PerformanceMetrics;
-  securityIssues: SecurityIssue[];
+  performanceProfile: PerformanceProfile;
+  securityReport: SecurityReport;
+  ruleViolations: RuleViolation[];
   suggestions: CodeSuggestion[];
   patterns: PatternAnalysis[];
 }
@@ -50,21 +54,34 @@ export interface PatternAnalysis {
 }
 
 export class LSLSemanticAnalysisService {
-  private embeddingsService: LSLEmbeddingsService;
+  public embeddingsService: LSLEmbeddingsService;
+  private ruleEngine: LSLRuleEngine;
+  private securityScanner: LSLSecurityScanner;
+  private performanceProfiler: LSLPerformanceProfiler;
 
   constructor() {
     this.embeddingsService = new LSLEmbeddingsService();
+    this.ruleEngine = new LSLRuleEngine();
+    this.securityScanner = new LSLSecurityScanner();
+    this.performanceProfiler = new LSLPerformanceProfiler();
   }
 
   analyzeCode(code: string): LSLAnalysisResult {
     const tokens = LSLParser.tokenize(code);
     const syntaxValidation = LSLParser.validateLSLCode(code);
 
+    // Enhanced analysis with specialized engines
+    const performanceProfile = this.performanceProfiler.analyzePerformance(tokens, code);
+    const securityVulnerabilities = this.securityScanner.scanCode(tokens, code);
+    const securityReport = this.securityScanner.generateSecurityReport(securityVulnerabilities);
+    const ruleViolations = this.ruleEngine.analyzeCode(tokens, code);
+
     return {
       syntaxValidation,
       semanticIssues: this.analyzeSemanticIssues(tokens, code),
-      performanceMetrics: this.analyzePerformance(tokens, code),
-      securityIssues: this.analyzeSecurityIssues(tokens, code),
+      performanceProfile,
+      securityReport,
+      ruleViolations,
       suggestions: this.generateSuggestions(tokens, code),
       patterns: this.analyzePatterns(tokens, code)
     };
@@ -447,40 +464,115 @@ export class LSLSemanticAnalysisService {
   }
 
   generateAnalysisReport(analysis: LSLAnalysisResult): string {
-    const report = [
-      '# LSL Code Analysis Report',
-      '',
-      '## Syntax Validation',
-      `- **Status**: ${analysis.syntaxValidation.isValid ? 'Valid' : 'Invalid'}`,
-      `- **Confidence**: ${analysis.syntaxValidation.confidence.toFixed(2)}`,
-      analysis.syntaxValidation.errors.length > 0 ? `- **Errors**: ${analysis.syntaxValidation.errors.join(', ')}` : '',
-      analysis.syntaxValidation.warnings.length > 0 ? `- **Warnings**: ${analysis.syntaxValidation.warnings.join(', ')}` : '',
-      '',
-      '## Performance Metrics',
-      `- **Estimated Memory Usage**: ${analysis.performanceMetrics.estimatedMemoryUsage} bytes`,
-      `- **Cyclomatic Complexity**: ${analysis.performanceMetrics.cyclomaticComplexity}`,
-      `- **Function Call Count**: ${analysis.performanceMetrics.functionCallCount}`,
-      '',
-      '## Security Analysis',
-      analysis.securityIssues.length > 0 ? analysis.securityIssues.map(issue => 
-        `- **${issue.severity.toUpperCase()}**: ${issue.description}`
-      ).join('\n') : '- No security issues detected',
-      '',
-      '## Detected Patterns',
-      analysis.patterns.map(pattern => 
-        `- **${pattern.pattern}** (${pattern.confidence.toFixed(2)}): ${pattern.description}`
-      ).join('\n'),
-      '',
-      '## Optimization Suggestions',
-      analysis.performanceMetrics.optimizationSuggestions.map(suggestion => 
-        `- ${suggestion}`
-      ).join('\n'),
-      '',
-      '## Code Suggestions',
-      analysis.suggestions.map(suggestion => 
-        `- **${suggestion.type}**: ${suggestion.description}`
-      ).join('\n')
-    ].filter(line => line !== '').join('\n');
+    let report = '# 🔍 LSL Comprehensive Code Analysis\n\n';
+
+    // Syntax Validation
+    report += '## 📝 Syntax Validation\n';
+    report += `- **Status**: ${analysis.syntaxValidation.isValid ? '✅ Valid' : '❌ Invalid'}\n`;
+    report += `- **Confidence**: ${analysis.syntaxValidation.confidence.toFixed(2)}\n`;
+    if (analysis.syntaxValidation.errors.length > 0) {
+      report += `- **Errors**: ${analysis.syntaxValidation.errors.join(', ')}\n`;
+    }
+    if (analysis.syntaxValidation.warnings.length > 0) {
+      report += `- **Warnings**: ${analysis.syntaxValidation.warnings.join(', ')}\n`;
+    }
+    report += '\n';
+
+    // Performance Analysis
+    report += '## ⚡ Performance Analysis\n';
+    const perf = analysis.performanceProfile;
+    const perfEmoji = perf.overall.rating === 'excellent' ? '🟢' :
+                     perf.overall.rating === 'good' ? '🔵' :
+                     perf.overall.rating === 'fair' ? '🟡' :
+                     perf.overall.rating === 'poor' ? '🟠' : '🔴';
+    
+    report += `- **Overall Score**: ${perf.overall.score}/100 ${perfEmoji} (${perf.overall.rating})\n`;
+    report += `- **Execution Cost**: ${perf.overall.executionCost} units\n`;
+    report += `- **Memory Footprint**: ${perf.overall.memoryFootprint} bytes\n`;
+    report += `- **Cyclomatic Complexity**: ${perf.metrics.cyclomaticComplexity}\n`;
+    
+    if (perf.bottlenecks.length > 0) {
+      report += '\n**Performance Bottlenecks:**\n';
+      for (const bottleneck of perf.bottlenecks.slice(0, 3)) {
+        const icon = bottleneck.severity === 'critical' ? '🚨' :
+                     bottleneck.severity === 'high' ? '⚠️' : '⚡';
+        report += `- ${icon} ${bottleneck.description}\n`;
+      }
+    }
+    report += '\n';
+
+    // Security Analysis
+    report += '## 🛡️ Security Analysis\n';
+    const sec = analysis.securityReport;
+    const secEmoji = sec.overallRisk === 'critical' ? '🚨' :
+                     sec.overallRisk === 'high' ? '⚠️' :
+                     sec.overallRisk === 'medium' ? '🟡' : '🟢';
+    
+    report += `- **Overall Risk**: ${secEmoji} ${sec.overallRisk.toUpperCase()}\n`;
+    report += `- **Vulnerabilities**: ${sec.summary.critical + sec.summary.high + sec.summary.medium + sec.summary.low}\n`;
+    report += `  - Critical: ${sec.summary.critical} | High: ${sec.summary.high} | Medium: ${sec.summary.medium} | Low: ${sec.summary.low}\n`;
+    
+    if (sec.vulnerabilities.length > 0) {
+      report += '\n**Key Security Issues:**\n';
+      for (const vuln of sec.vulnerabilities.slice(0, 3)) {
+        const icon = vuln.severity === 'critical' ? '🚨' :
+                     vuln.severity === 'high' ? '⚠️' : '🔒';
+        report += `- ${icon} ${vuln.threatName}: ${vuln.description}\n`;
+      }
+    }
+    report += '\n';
+
+    // Rule Violations
+    if (analysis.ruleViolations.length > 0) {
+      report += '## 📋 Code Quality Rules\n';
+      const errorCount = analysis.ruleViolations.filter(r => r.severity === 'error').length;
+      const warningCount = analysis.ruleViolations.filter(r => r.severity === 'warning').length;
+      const infoCount = analysis.ruleViolations.filter(r => r.severity === 'info').length;
+      
+      report += `- **Violations**: ${analysis.ruleViolations.length} total\n`;
+      report += `  - Errors: ${errorCount} | Warnings: ${warningCount} | Info: ${infoCount}\n`;
+      
+      if (analysis.ruleViolations.length > 0) {
+        report += '\n**Top Issues:**\n';
+        for (const violation of analysis.ruleViolations.slice(0, 3)) {
+          const icon = violation.severity === 'error' ? '❌' :
+                       violation.severity === 'warning' ? '⚠️' : 'ℹ️';
+          report += `- ${icon} ${violation.ruleName}: ${violation.message}\n`;
+        }
+      }
+      report += '\n';
+    }
+
+    // Detected Patterns
+    if (analysis.patterns.length > 0) {
+      report += '## 🎯 Architectural Patterns\n';
+      for (const pattern of analysis.patterns.slice(0, 5)) {
+        const confidence = Math.round(pattern.confidence * 100);
+        report += `- **${pattern.pattern}** (${confidence}% confidence): ${pattern.description}\n`;
+      }
+      report += '\n';
+    }
+
+    // Top Recommendations
+    const allRecommendations = [
+      ...perf.optimizations.filter(o => o.priority === 'high').map(o => `⚡ ${o.description}`),
+      ...sec.recommendations.map(r => `🛡️ ${r}`),
+      ...analysis.suggestions.slice(0, 2).map(s => `💡 ${s.description}`)
+    ];
+
+    if (allRecommendations.length > 0) {
+      report += '## 🎯 Top Recommendations\n';
+      for (const rec of allRecommendations.slice(0, 5)) {
+        report += `- ${rec}\n`;
+      }
+      report += '\n';
+    }
+
+    // Detailed Reports Available
+    report += '## 📊 Detailed Analysis Available\n';
+    report += '- Use `lsl-analyze-code` with full response for complete performance report\n';
+    report += '- Security scan includes CWE mappings and compliance checks\n';
+    report += '- Rule engine provides specific fix suggestions with examples\n';
 
     return report;
   }

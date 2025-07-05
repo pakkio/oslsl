@@ -1,9 +1,14 @@
 import { LSLValidationResult } from './lsl-parser.js';
+import { LSLEmbeddingsService } from './lsl-embeddings.js';
+import { RuleViolation } from './lsl-rule-engine.js';
+import { SecurityReport } from './lsl-security-scanner.js';
+import { PerformanceProfile } from './lsl-performance-profiler.js';
 export interface LSLAnalysisResult {
     syntaxValidation: LSLValidationResult;
     semanticIssues: SemanticIssue[];
-    performanceMetrics: PerformanceMetrics;
-    securityIssues: SecurityIssue[];
+    performanceProfile: PerformanceProfile;
+    securityReport: SecurityReport;
+    ruleViolations: RuleViolation[];
     suggestions: CodeSuggestion[];
     patterns: PatternAnalysis[];
 }
@@ -42,7 +47,10 @@ export interface PatternAnalysis {
     suggestedImprovements: string[];
 }
 export declare class LSLSemanticAnalysisService {
-    private embeddingsService;
+    embeddingsService: LSLEmbeddingsService;
+    private ruleEngine;
+    private securityScanner;
+    private performanceProfiler;
     constructor();
     analyzeCode(code: string): LSLAnalysisResult;
     private analyzeSemanticIssues;
