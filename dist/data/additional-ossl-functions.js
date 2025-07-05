@@ -248,14 +248,15 @@ llSay(0, "Script engine: " + engine);`,
     {
         name: 'osStringSubString',
         description: 'Extract a substring with UTF-8 support',
-        syntax: 'string osStringSubString(string src, integer start)',
+        syntax: 'string osStringSubString(string src, integer start, integer length)',
         parameters: [
             { name: 'src', type: 'string', description: 'Source string' },
-            { name: 'start', type: 'integer', description: 'Start position' }
+            { name: 'start', type: 'integer', description: 'Start position' },
+            { name: 'length', type: 'integer', description: 'Length of substring' }
         ],
         returnType: 'string',
         category: 'String',
-        example: `string result = osStringSubString("Hello World", 6);
+        example: `string result = osStringSubString("Hello World", 6, 5);
 llSay(0, "Substring: " + result); // "World"`,
         availability: 'OpenSimulator 0.7.0+',
         permissions: 'OSSL_Public',

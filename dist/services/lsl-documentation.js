@@ -135,49 +135,33 @@ ${url}
     async lookupOSSLFunction(functionName) {
         const cleanName = functionName.replace(/[()]/g, '');
         const cacheKey = `ossl-${cleanName}`;
-        // Check cache first
         if (this.isCacheValid(cacheKey)) {
             return this.cache.get(cacheKey);
         }
-        // First try offline database
         const offlineFunction = ossl_functions_js_1.OSSLFunctions.getFunctionByName(cleanName);
         if (offlineFunction) {
             const response = this.formatOSSLResponse(offlineFunction);
             this.setCache(cacheKey, response);
             return response;
         }
-        // Fallback to online lookup with reduced timeout
         try {
-            const url = `${LSLDocumentationService.BASE_URLS.OPENSIM_WIKI}${cleanName}`;
-            const response = await axios_1.default.get(url, { timeout: 5000 });
-            const $ = cheerio.load(response.data);
+            const searchUrl = `${LSLDocumentationService.BASE_URLS.OPENSIM_WIKI}index.php?title=Special:Search&search=${encodeURIComponent(cleanName)}`;
+            let response = await axios_1.default.get(searchUrl, { timeout: 7000 });
+            let $ = cheerio.load(response.data);
+            const firstResultLink = $('.mw-search-result-heading a').first().attr('href');
+            if (!firstResultLink) {
+                throw new Error('Function not found on the wiki.');
+            }
+            const functionUrl = `${LSLDocumentationService.BASE_URLS.OPENSIM_WIKI}${firstResultLink}`;
+            response = await axios_1.default.get(functionUrl, { timeout: 7000 });
+            $ = cheerio.load(response.data);
             const description = $('.mw-parser-output p').first().text().trim();
-            const syntax = $('pre, code').first().text().trim();
-            const examples = this.extractExamples($);
+            const syntax = $('pre.lsl').first().text().trim();
             const result = {
                 content: [
                     {
                         type: 'text',
-                        text: `# OSSL Function: ${functionName}
-
-## Description
-${description}
-
-## Syntax
-\`\`\`lsl
-${syntax}
-\`\`\`
-
-## Examples
-${examples}
-
-## Documentation Source
-${url}
-
-## Related Resources
-- [OSSL Documentation](http://opensimulator.org/wiki/OSSL)
-- [OpenSimulator Scripting](http://opensimulator.org/wiki/Scripting_Documentation)
-`,
+                        text: `# OSSL Function: ${functionName}\n\n## Description\n${description}\n\n## Syntax\n\`\`\`lsl\n${syntax}\n\`\`\`\n\n## Documentation Source\n${functionUrl}\n\n## Status\nFetched online, as it was not in the local database.`,
                     },
                 ],
             };
@@ -185,10 +169,6 @@ ${url}
             return result;
         }
         catch (error) {
-            // If offline function exists, use it even if online lookup fails
-            if (offlineFunction) {
-                return this.formatOSSLResponse(offlineFunction);
-            }
             return this.getOSSLFallbackResponse(functionName, error);
         }
     }
