@@ -217,3 +217,21 @@ Your LSL MCP Server v2.0 is working correctly when:
 ✅ Fallback provides suggestions for unknown functions  
 
 **Perfect for Corona Agent development! 🚀**
+
+## 🚀 Build and Push
+
+### 1. Build the Project
+```bash
+npm run build
+```
+
+### 2. Commit the Changes
+```bash
+git add .
+git commit -m "Your commit message"
+```
+
+### 3. Push to Remote
+```bash
+git push
+```
