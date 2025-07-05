@@ -7,10 +7,12 @@ const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
 const lsl_documentation_1 = require("./services/lsl-documentation");
 const lsl_resource_1 = require("./services/lsl-resource");
+const lsl_semantic_analysis_1 = require("./services/lsl-semantic-analysis");
 class LSLMCPServer {
     server;
     docService;
     resourceService;
+    analysisService;
     constructor() {
         this.server = new index_js_1.Server({
             name: 'lsl-mcp-server',
@@ -23,6 +25,7 @@ class LSLMCPServer {
         });
         this.docService = new lsl_documentation_1.LSLDocumentationService();
         this.resourceService = new lsl_resource_1.LSLResourceService();
+        this.analysisService = new lsl_semantic_analysis_1.LSLSemanticAnalysisService();
         this.setupHandlers();
     }
     setupHandlers() {
@@ -119,6 +122,39 @@ class LSLMCPServer {
                                     default: 'all',
                                 },
                             },
+                        },
+                    },
+                    {
+                        name: 'lsl-analyze-code',
+                        description: 'Perform comprehensive semantic analysis of LSL code',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                code: {
+                                    type: 'string',
+                                    description: 'LSL code to analyze',
+                                },
+                            },
+                            required: ['code'],
+                        },
+                    },
+                    {
+                        name: 'lsl-find-similar',
+                        description: 'Find similar LSL functions based on functionality',
+                        inputSchema: {
+                            type: 'object',
+                            properties: {
+                                function_name: {
+                                    type: 'string',
+                                    description: 'Function name to find similar functions for',
+                                },
+                                max_results: {
+                                    type: 'integer',
+                                    description: 'Maximum number of results to return',
+                                    default: 5,
+                                },
+                            },
+                            required: ['function_name'],
                         },
                     },
                 ],
@@ -218,6 +254,36 @@ class LSLMCPServer {
                         return await this.docService.getBestPractices(args?.category);
                     case 'ossl-browse-functions':
                         return await this.docService.browseOSSLFunctions(args?.category);
+                    case 'lsl-analyze-code':
+                        const analysis = this.analysisService.analyzeCode(args?.code);
+                        const report = this.analysisService.generateAnalysisReport(analysis);
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: report,
+                                },
+                            ],
+                        };
+                    case 'lsl-find-similar':
+                        const similarFunctions = this.analysisService['embeddingsService'].findSimilarFunctions(args?.function_name, args?.max_results || 5);
+                        return {
+                            content: [
+                                {
+                                    type: 'text',
+                                    text: `# Similar Functions to ${args?.function_name}
+
+${similarFunctions.map((result, index) => `## ${index + 1}. ${result.functionName}
+- **Similarity**: ${result.similarity.toFixed(3)}
+- **Reason**: ${result.reason}
+`).join('\n')}
+
+## Usage
+Use these similar functions when you need alternative approaches or want to explore related functionality.
+`,
+                                },
+                            ],
+                        };
                     default:
                         throw new Error(`Unknown tool: ${name}`);
                 }

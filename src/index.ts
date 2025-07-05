@@ -16,11 +16,13 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import { LSLDocumentationService } from './services/lsl-documentation';
 import { LSLResourceService } from './services/lsl-resource';
+import { LSLSemanticAnalysisService } from './services/lsl-semantic-analysis';
 
 export class LSLMCPServer {
   public server: Server;
   private docService: LSLDocumentationService;
   private resourceService: LSLResourceService;
+  private analysisService: LSLSemanticAnalysisService;
 
   constructor() {
     this.server = new Server(
@@ -38,6 +40,7 @@ export class LSLMCPServer {
 
     this.docService = new LSLDocumentationService();
     this.resourceService = new LSLResourceService();
+    this.analysisService = new LSLSemanticAnalysisService();
 
     this.setupHandlers();
   }
@@ -136,6 +139,39 @@ export class LSLMCPServer {
                   default: 'all',
                 },
               },
+            },
+          },
+          {
+            name: 'lsl-analyze-code',
+            description: 'Perform comprehensive semantic analysis of LSL code',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                code: {
+                  type: 'string',
+                  description: 'LSL code to analyze',
+                },
+              },
+              required: ['code'],
+            },
+          },
+          {
+            name: 'lsl-find-similar',
+            description: 'Find similar LSL functions based on functionality',
+            inputSchema: {
+              type: 'object',
+              properties: {
+                function_name: {
+                  type: 'string',
+                  description: 'Function name to find similar functions for',
+                },
+                max_results: {
+                  type: 'integer',
+                  description: 'Maximum number of results to return',
+                  default: 5,
+                },
+              },
+              required: ['function_name'],
             },
           },
         ],
@@ -255,6 +291,41 @@ export class LSLMCPServer {
             return await this.docService.browseOSSLFunctions(
               args?.category as string
             );
+
+          case 'lsl-analyze-code':
+            const analysis = this.analysisService.analyzeCode(args?.code as string);
+            const report = this.analysisService.generateAnalysisReport(analysis);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: report,
+                },
+              ],
+            };
+
+          case 'lsl-find-similar':
+            const similarFunctions = this.analysisService['embeddingsService'].findSimilarFunctions(
+              args?.function_name as string,
+              args?.max_results as number || 5
+            );
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: `# Similar Functions to ${args?.function_name}
+
+${similarFunctions.map((result, index) => `## ${index + 1}. ${result.functionName}
+- **Similarity**: ${result.similarity.toFixed(3)}
+- **Reason**: ${result.reason}
+`).join('\n')}
+
+## Usage
+Use these similar functions when you need alternative approaches or want to explore related functionality.
+`,
+                },
+              ],
+            };
 
           default:
             throw new Error(`Unknown tool: ${name}`);
