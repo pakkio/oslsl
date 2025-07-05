@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.LSLMCPServer = void 0;
 const index_js_1 = require("@modelcontextprotocol/sdk/server/index.js");
 const stdio_js_1 = require("@modelcontextprotocol/sdk/server/stdio.js");
 const types_js_1 = require("@modelcontextprotocol/sdk/types.js");
@@ -239,6 +240,7 @@ class LSLMCPServer {
         console.error('LSL MCP Server running on stdio');
     }
 }
+exports.LSLMCPServer = LSLMCPServer;
 const server = new LSLMCPServer();
 server.run().catch(console.error);
 //# sourceMappingURL=index.js.map

@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.OSSLFunctions = void 0;
 const ossl_functions_extended_js_1 = require("./ossl-functions-extended.js");
+const additional_ossl_functions_js_1 = require("./additional-ossl-functions.js");
 class OSSLFunctions {
     static getAllFunctions() {
         const coreFunctions = [
@@ -564,7 +565,7 @@ vector size = llList2Vector(params, 1);`,
             }
         ];
         // Merge core functions with extended functions for comprehensive coverage
-        return [...coreFunctions, ...ossl_functions_extended_js_1.ExtendedOSSLFunctions];
+        return [...coreFunctions, ...ossl_functions_extended_js_1.ExtendedOSSLFunctions, ...additional_ossl_functions_js_1.additionalOSSLFunctions];
     }
     static getPermissionLevels() {
         return {
