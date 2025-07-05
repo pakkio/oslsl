@@ -1,4 +1,5 @@
 import { ExtendedOSSLFunctions } from './ossl-functions-extended.js';
+import { additionalOSSLFunctions } from './additional-ossl-functions.js';
 
 export class OSSLFunctions {
   static getAllFunctions() {
@@ -574,7 +575,7 @@ vector size = llList2Vector(params, 1);`,
     ];
     
     // Merge core functions with extended functions for comprehensive coverage
-    return [...coreFunctions, ...ExtendedOSSLFunctions];
+    return [...coreFunctions, ...ExtendedOSSLFunctions, ...additionalOSSLFunctions];
   }
 
   static getPermissionLevels() {

@@ -17,8 +17,8 @@ import {
 import { LSLDocumentationService } from './services/lsl-documentation';
 import { LSLResourceService } from './services/lsl-resource';
 
-class LSLMCPServer {
-  private server: Server;
+export class LSLMCPServer {
+  public server: Server;
   private docService: LSLDocumentationService;
   private resourceService: LSLResourceService;
 
