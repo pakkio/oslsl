@@ -30,7 +30,7 @@ A specialized Model Context Protocol (MCP) server for LSL (Linden Scripting Lang
 ## Installation
 
 ```bash
-cd lsl-mcp-server
+cd oslsl
 npm install
 npm run build
 ```
@@ -61,14 +61,15 @@ Add this to your MCP client configuration:
     "lsl-mcp-server": {
       "command": "wsl",
       "args": [
-        "-e",
-        "bash",
-        "/home/pakkio/IdeaProjects/prova/lsl-mcp-server/run-server.sh"
+        "-d", "Ubuntu-24.04",
+        "/home/pakkio/IdeaProjects/oslsl/run-server.sh"
       ]
     }
   }
 }
 ```
+
+**Important**: Make sure to specify the correct WSL distribution (`Ubuntu-24.04`) and the full path to your project directory.
 
 ### Development Mode
 ```bash
@@ -91,6 +92,13 @@ The server is designed to run in WSL. Make sure:
 1. Node.js is installed via NVM
 2. The wrapper script has executable permissions
 3. The full path to the script is used in MCP client configuration
+4. You're using the correct WSL distribution (use `wsl -l -v` to check)
+
+### WSL Distribution Issues
+If you get "No such file or directory" errors, check:
+1. Which WSL distribution is your default: `wsl --status`
+2. Which distribution contains the project: `wsl -d Ubuntu-24.04 ls /home/pakkio/IdeaProjects/oslsl`
+3. Configure MCP to use the correct distribution with `-d` flag
 
 ## MCP Tools
 
